@@ -995,7 +995,24 @@ static inline void *alloc_code_gen_buffer(struct uc_struct *uc)
         return NULL;
     }
 
-    return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    {
+        void *buf = VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+        if (!buf)
+            return NULL;
+        /* Commit the first region so that tcg_target_qemu_prologue (and first TBs)
+         * can write without triggering an access violation. The rest is committed
+         * on demand by code_gen_buffer_handler. */
+        {
+            SIZE_T commit = size;
+            if (commit > COMMIT_COUNT * 4096)
+                commit = COMMIT_COUNT * 4096;
+            if (VirtualAlloc(buf, commit, MEM_COMMIT, PAGE_EXECUTE_READWRITE) == NULL) {
+                VirtualFree(buf, 0, MEM_RELEASE);
+                return NULL;
+            }
+        }
+        return buf;
+    }
 }
 void free_code_gen_buffer(struct uc_struct *uc)
 {
