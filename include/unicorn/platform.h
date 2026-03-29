@@ -241,11 +241,17 @@ static int usleep(uint32_t usec)
 #endif
 
 // misc support
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || (defined(_WIN32) && defined(__clang__))
 #ifdef _WIN64
+  #if !defined(_SSIZE_T_DEFINED) && !defined(_SSIZE_T_) && !defined(_SSIZE_T_DECLARED)
 typedef signed __int64 ssize_t;
+    #define _SSIZE_T_DEFINED
+  #endif
 #else
+  #if !defined(_SSIZE_T_DEFINED) && !defined(_SSIZE_T_) && !defined(_SSIZE_T_DECLARED)
 typedef _W64 signed int ssize_t;
+    #define _SSIZE_T_DEFINED
+  #endif
 #endif
 
 #ifndef va_copy

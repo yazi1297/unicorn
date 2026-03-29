@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright (c) 2012-2014 Bastian Koppelmann C-Lab/University Paderborn
  *
  * This library is free software; you can redistribute it and/or

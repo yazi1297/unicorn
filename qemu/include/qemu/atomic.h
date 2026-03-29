@@ -245,6 +245,71 @@
 
 /* Provide shorter names for GCC atomic builtins.  */
 #ifdef _MSC_VER
+#if defined(_M_IX86)
+/* v141_xp x86 may miss InterlockedAnd/Or/Xor/Add symbols at link-time. */
+static inline long uc_atomic_fetch_add32(volatile long *ptr, long n)
+{
+    return InterlockedExchangeAdd((volatile LONG *)ptr, n);
+}
+
+static inline long uc_atomic_fetch_and32(volatile long *ptr, long n)
+{
+    long oldv, newv;
+    do {
+        oldv = *ptr;
+        newv = oldv & n;
+    } while (InterlockedCompareExchange((volatile LONG *)ptr, newv, oldv) != oldv);
+    return oldv;
+}
+
+static inline long uc_atomic_fetch_or32(volatile long *ptr, long n)
+{
+    long oldv, newv;
+    do {
+        oldv = *ptr;
+        newv = oldv | n;
+    } while (InterlockedCompareExchange((volatile LONG *)ptr, newv, oldv) != oldv);
+    return oldv;
+}
+
+static inline long uc_atomic_fetch_xor32(volatile long *ptr, long n)
+{
+    long oldv, newv;
+    do {
+        oldv = *ptr;
+        newv = oldv ^ n;
+    } while (InterlockedCompareExchange((volatile LONG *)ptr, newv, oldv) != oldv);
+    return oldv;
+}
+
+// these return the new value (so we make it return the previous value)
+#define atomic_fetch_inc(ptr)         ((InterlockedIncrement(ptr))-1)
+#define atomic_fetch_dec(ptr)         ((InterlockedDecrement(ptr))+1)
+#define atomic_fetch_add(ptr, n)      (uc_atomic_fetch_add32((volatile long*)(ptr), (long)(n)))
+#define atomic_fetch_sub(ptr, n)      (uc_atomic_fetch_add32((volatile long*)(ptr), (long)(-(n))))
+#define atomic_fetch_and(ptr, n)      (uc_atomic_fetch_and32((volatile long*)(ptr), (long)(n)))
+#define atomic_fetch_or(ptr, n)       (uc_atomic_fetch_or32((volatile long*)(ptr), (long)(n)))
+#define atomic_fetch_xor(ptr, n)      (uc_atomic_fetch_xor32((volatile long*)(ptr), (long)(n)))
+
+#define atomic_inc_fetch(ptr)         (InterlockedIncrement((long*)(ptr)))
+#define atomic_dec_fetch(ptr)         (InterlockedDecrement((long*)(ptr)))
+#define atomic_add_fetch(ptr, n)      (InterlockedExchangeAdd((long*)ptr, n) + n)
+#define atomic_sub_fetch(ptr, n)      (InterlockedExchangeAdd((long*)ptr, n) - n)
+#define atomic_and_fetch(ptr, n)      (uc_atomic_fetch_and32((volatile long*)(ptr), (long)(n)) & (n))
+#define atomic_or_fetch(ptr, n)       (uc_atomic_fetch_or32((volatile long*)(ptr), (long)(n)) | (n))
+#define atomic_xor_fetch(ptr, n)      (uc_atomic_fetch_xor32((volatile long*)(ptr), (long)(n)) ^ (n))
+
+#define atomic_cmpxchg(ptr, old, new) ((InterlockedCompareExchange(ptr, old, new)))
+#define atomic_cmpxchg__nocheck(ptr, old, new)  atomic_cmpxchg(ptr, old, new)
+
+#define atomic_inc(ptr)        ((void) InterlockedIncrement(ptr))
+#define atomic_dec(ptr)        ((void) InterlockedDecrement(ptr))
+#define atomic_add(ptr, n)     ((void) uc_atomic_fetch_add32((volatile long*)(ptr), (long)(n)))
+#define atomic_sub(ptr, n)     ((void) uc_atomic_fetch_add32((volatile long*)(ptr), (long)(-(n))))
+#define atomic_and(ptr, n)     ((void) uc_atomic_fetch_and32((volatile long*)(ptr), (long)(n)))
+#define atomic_or(ptr, n)      ((void) uc_atomic_fetch_or32((volatile long*)(ptr), (long)(n)))
+#define atomic_xor(ptr, n)     ((void) uc_atomic_fetch_xor32((volatile long*)(ptr), (long)(n)))
+#else
 // these return the new value (so we make it return the previous value)
 #define atomic_fetch_inc(ptr)         ((InterlockedIncrement(ptr))-1)
 #define atomic_fetch_dec(ptr)         ((InterlockedDecrement(ptr))+1)
@@ -272,6 +337,7 @@
 #define atomic_and(ptr, n)     ((void) InterlockedAnd(ptr, n))
 #define atomic_or(ptr, n)      ((void) InterlockedOr(ptr, n))
 #define atomic_xor(ptr, n)     ((void) InterlockedXor(ptr, n))
+#endif
 #else // GCC/clang
 // these return the previous value
 #define atomic_fetch_inc(ptr)  __sync_fetch_and_add(ptr, 1)
